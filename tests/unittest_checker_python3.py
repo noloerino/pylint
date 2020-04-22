@@ -830,8 +830,8 @@ class TestPython3Checker(testutils.CheckerTestCase):
         with self.assertNoMessages():
             self.walk(good_module)
 
-    def test_comprehension_escape_if_clause_nested(self):
-        good_assign = astroid.extract_node(
+    def test_comprehension_escape_nested_scope(self):
+        nested_for = astroid.extract_node(
             """
         c = [
             i for i in range(10)
@@ -839,16 +839,17 @@ class TestPython3Checker(testutils.CheckerTestCase):
         ]
         """
         )
-        bad_assign = astroid.extract_node(
+        nested_lambda = astroid.extract_node(
             """
-        c = [i for i in range(10) if j % 2 == 0 for j in range(i)]
+        c = [
+            i for i in range(10)
+            if (lambda j: j == i)(0)
+        ]
         """
         )
         with self.assertNoMessages():
-            self.checker.visit_listcomp(good_assign.value)
-        message = testutils.Message("used-before-assignment", node=bad_assign)
-        with self.assertAddsMessages(message):
-            self.checker.visit_listcomp(bad_assign.value)
+            self.checker.visit_listcomp(nested_for.value)
+            self.checker.visit_listcomp(nested_lambda.value)
 
     def test_comprehension_escape_newly_introduced(self):
         node = astroid.extract_node(
